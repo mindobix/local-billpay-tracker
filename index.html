@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local › BillPay</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<header class="header">
+  <a class="logo" href="../index.html">Local<span class="logo-sep"> &rsaquo; </span><span class="logo-name">BillPay</span></a>
+  <nav class="nav">
+    <button class="nav-btn active" id="nav-calendar" onclick="switchView('calendar')">📅 Calendar</button>
+    <button class="nav-btn" id="nav-expenses" onclick="switchView('expenses')">📋 Bills</button>
+    <button class="nav-btn" id="nav-subscriptions" onclick="switchView('subscriptions')">🔄 Subscriptions</button>
+    <button class="nav-btn" id="nav-reports" onclick="switchView('reports')">📊 Reports</button>
+  </nav>
+  <div class="header-spacer"></div>
+  <button class="header-util-btn" onclick="openManageModal()" title="Manage payees and categories">⚙ Manage</button>
+  <button class="header-util-btn" onclick="backupData()" title="Download a JSON backup of all bills">&#8681; Backup</button>
+  <button class="header-util-btn" onclick="document.getElementById('restore-input').click()" title="Restore from a JSON backup">&#8679; Restore</button>
+  <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)">
+  <button class="header-add-btn" onclick="openBulkAddModal()">+ Add Bills</button>
+</header>
+
+<!-- ─── STATS BAR ─── -->
+<div class="stats-bar" id="stats-bar"></div>
+
+<!-- ─── FILTER BAR (Bills only) ─── -->
+<div class="filter-bar" id="filter-bar" style="display:none">
+  <input type="text" id="gf-search" placeholder="Search bills..." oninput="onFilterChange()">
+  <select id="gf-payee" onchange="onFilterChange()">
+    <option value="">All Payees</option>
+    <!-- populated by app.js -->
+  </select>
+  <select id="gf-date" onchange="onFilterChange()">
+    <option value="">All Dates</option>
+    <option value="today">Today</option>
+    <option value="week">This Week</option>
+    <option value="month">This Month</option>
+    <option value="custom">Custom Range</option>
+  </select>
+  <div id="gf-custom-range" style="display:none;gap:6px;align-items:center">
+    <input type="date" id="gf-from" onchange="onFilterChange()" style="width:136px">
+    <span style="color:var(--text-muted);font-size:12px">to</span>
+    <input type="date" id="gf-to" onchange="onFilterChange()" style="width:136px">
+  </div>
+  <div class="filter-spacer"></div>
+  <span class="filter-count" id="expenses-count"></span>
+  <button class="gf-reset-btn" onclick="resetFilters()" title="Clear all filters">✕ Reset</button>
+</div>
+
+<!-- ─── ACTIVE FILTERS BAR ─── -->
+<div class="gf-active-bar" id="gf-active-bar" style="display:none">
+  <span class="gf-active-label">Filters:</span>
+  <div class="gf-active-chips" id="gf-active-chips"></div>
+</div>
+
+<!-- ─── MAIN VIEWS ─── -->
+<div class="main">
+
+  <!-- ── CALENDAR VIEW ── -->
+  <div id="view-calendar">
+    <div class="cal-nav">
+      <button class="arrow-btn" onclick="shiftMonth(-1)">&#8592;</button>
+      <button class="arrow-btn" onclick="shiftMonth(1)">&#8594;</button>
+      <div class="month-label" id="month-label"></div>
+      <button class="today-btn" onclick="jumpToday()">Today</button>
+      <span id="monthly-total"></span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- ── BILLS VIEW ── -->
+  <div id="view-expenses" style="display:none">
+    <div class="table-header">
+      <span class="table-title">All Bills</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('date')">Date <span class="sort-indicator" id="sort-date">↕</span></th>
+            <th>Description</th>
+            <th onclick="sortBy('amount')">Amount <span class="sort-indicator" id="sort-amount">↕</span></th>
+            <th>Payee</th>
+            <th>Tags</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="expenses-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── REPORTS VIEW ── -->
+  <div id="view-reports" style="display:none">
+    <div class="report-controls">
+      <span class="report-controls-label">Date Range</span>
+      <input type="month" id="report-from" onchange="onReportRangeChange()">
+      <span class="report-range-sep">to</span>
+      <input type="month" id="report-to" onchange="onReportRangeChange()">
+    </div>
+    <div id="report-table-container"></div>
+  </div>
+
+  <!-- ── SUBSCRIPTIONS VIEW ── -->
+  <div id="view-subscriptions" style="display:none">
+    <div class="subs-header">
+      <span class="subs-title">Subscriptions</span>
+      <button class="btn btn-primary" onclick="openAddModal(true)">+ Add Subscription</button>
+    </div>
+    <div id="subs-container"></div>
+  </div>
+
+</div>
+
+<!-- ─── BULK ADD BILLS MODAL ─── -->
+<div class="overlay" id="bulk-add-overlay">
+  <div class="modal modal-bulk">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-hdr-title">Add Bills</div>
+        <div class="modal-hdr-sub">Check each payee you're paying and enter the amount</div>
+      </div>
+      <button class="close-btn" onclick="closeBulkAddModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Grid -->
+      <div class="bulk-grid-wrap">
+        <table class="bulk-grid-table">
+          <thead>
+            <tr>
+              <th class="col-check">Pay</th>
+              <th class="col-payee">Payee</th>
+              <th class="col-amount">Amount ($)</th>
+              <th class="col-date">Date</th>
+              <th class="col-notes">Notes</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="bulk-grid-body"></tbody>
+        </table>
+      </div>
+
+      <button class="bulk-add-row-btn" onclick="addBulkRow()">+ Add Payee</button>
+
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeBulkAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveBulkAddForm()">Save Bills</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADD / EDIT BILL MODAL ─── -->
+<div class="overlay" id="expense-overlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-hdr-title" id="modal-title">Add Bill</div>
+      <button class="close-btn" onclick="closeExpenseModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <form id="expense-form" onsubmit="return false">
+
+        <!-- Date + Amount -->
+        <div class="form-row">
+          <div class="fg">
+            <label>Date</label>
+            <input type="date" id="f-date" required>
+          </div>
+          <div class="fg">
+            <label>Amount ($)</label>
+            <input type="number" id="f-amount" placeholder="0.00" step="0.01" min="0.01" required>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-row">
+          <div class="fg">
+            <label>Description</label>
+            <input type="text" id="f-description" placeholder="What is this bill for?" required>
+          </div>
+        </div>
+
+        <!-- Payee -->
+        <div class="form-row">
+          <div class="fg">
+            <label>Payee</label>
+            <input type="text" id="f-payee" list="payee-datalist" placeholder="Who are you paying?">
+            <datalist id="payee-datalist"></datalist>
+          </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Subscription toggle -->
+        <div class="checkbox-row">
+          <input type="checkbox" id="f-subscription" onchange="onSubscriptionChange()">
+          <label for="f-subscription">🔄 This is a recurring subscription</label>
+        </div>
+
+        <!-- Frequency (shown when subscription checked) -->
+        <div class="form-row" id="f-freq-row" style="display:none">
+          <div class="fg">
+            <label>Billing Frequency</label>
+            <select id="f-frequency">
+              <option value="weekly">Weekly</option>
+              <option value="monthly" selected>Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Notes -->
+        <div class="form-row">
+          <div class="fg">
+            <label>Notes (optional)</label>
+            <textarea id="f-notes" placeholder="Any additional notes..."></textarea>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="form-row">
+          <div class="fg">
+            <label>Tags (optional)</label>
+            <div class="tags-box" id="f-tags-list"></div>
+            <div class="tags-add-row">
+              <input type="text" id="f-new-tag" placeholder="Add a tag..."
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();addFormTag();}">
+              <button type="button" class="tags-add-btn" onclick="addFormTag()">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeExpenseModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveExpenseForm()">Save Bill</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DAY DETAIL MODAL ─── -->
+<div class="overlay" id="day-overlay">
+  <div class="modal modal-wide">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-hdr-title" id="day-modal-title"></div>
+        <div class="modal-hdr-sub" id="day-modal-total"></div>
+      </div>
+      <button class="close-btn" onclick="closeDayModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div id="day-expense-list"></div>
+      <button class="add-expense-row" onclick="addExpenseFromDay()">
+        <span>+</span> Add Bill for This Day
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MANAGE MODAL ─── -->
+<div class="overlay" id="manage-overlay">
+  <div class="modal modal-manage">
+    <div class="modal-hdr">
+      <div class="modal-hdr-title">Manage</div>
+      <button class="close-btn" onclick="closeManageModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div id="manage-payees-list"></div>
+      <div class="manage-add-row">
+        <input type="text" id="new-payee-input" placeholder="New payee name..."
+               onkeydown="if(event.key==='Enter')addNewPayee()">
+        <label class="manage-recur-label">
+          <input type="checkbox" id="new-payee-recur"> Recurring
+        </label>
+        <button class="btn btn-primary" onclick="addNewPayee()">+ Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div id="toast" class="toast"></div>
+
+<script src="js/storage.js"></script>
+<script src="js/helpers.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/expenses.js"></script>
+<script src="js/subscriptions.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/manage.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
