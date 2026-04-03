@@ -1,14 +1,26 @@
 let currentView = 'calendar';
 
+function toggleAddDropdown() {
+  document.getElementById('header-add-menu').classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  const dropdown = document.getElementById('header-add-dropdown');
+  if (dropdown && !dropdown.contains(e.target)) {
+    document.getElementById('header-add-menu').classList.remove('open');
+  }
+});
+
 function switchView(view) {
   currentView = view;
   ['calendar', 'expenses', 'subscriptions', 'reports'].forEach(v => {
     document.getElementById(`view-${v}`).style.display = v === view ? '' : 'none';
     document.getElementById(`nav-${v}`).classList.toggle('active', v === view);
   });
-  document.getElementById('filter-bar').style.display = view === 'expenses' ? 'flex' : 'none';
+  const showFilter = view === 'expenses' || view === 'calendar';
+  document.getElementById('filter-bar').style.display = showFilter ? 'flex' : 'none';
   document.getElementById('gf-active-bar').style.display =
-    view === 'expenses' && document.getElementById('gf-active-bar').innerHTML.includes('gf-chip') ? 'flex' : 'none';
+    showFilter && document.getElementById('gf-active-bar').innerHTML.includes('gf-chip') ? 'flex' : 'none';
   renderCurrentView();
 }
 

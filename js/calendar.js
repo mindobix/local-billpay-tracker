@@ -2,7 +2,7 @@ let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 
 function renderCalendar() {
-  const expenses = getExpenses();
+  const expenses = applyFilters(getExpenses());
   const mk = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
 
   // Build day → expenses map
@@ -73,6 +73,6 @@ function jumpToday() {
 }
 
 function openDayModal(dateStr) {
-  const expenses = getExpenses().filter(e => e.date === dateStr);
+  const expenses = applyFilters(getExpenses()).filter(e => e.date === dateStr);
   showDayModal(dateStr, expenses);
 }

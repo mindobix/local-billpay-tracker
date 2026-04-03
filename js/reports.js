@@ -28,10 +28,21 @@ function onReportRangeChange() {
 function renderReports() {
   initReports();
 
+  const subFilter = document.getElementById('report-subscription').value;
+  const recurFilter = document.getElementById('report-recurring').value;
+  const recurringNames = recurFilter !== 'all'
+    ? new Set(getPayees().filter(p => p.isRecurring).map(p => p.name))
+    : null;
+
   const expenses = getExpenses().filter(e => {
     if (!e.date) return false;
     const mk = e.date.slice(0, 7);
-    return mk >= reportFrom && mk <= reportTo;
+    if (mk < reportFrom || mk > reportTo) return false;
+    if (subFilter === 'exclude' && e.isSubscription) return false;
+    if (subFilter === 'only' && !e.isSubscription) return false;
+    if (recurFilter === 'recurring'    && !recurringNames.has(e.payee || e.paymentMethod || '')) return false;
+    if (recurFilter === 'nonrecurring' &&  recurringNames.has(e.payee || e.paymentMethod || '')) return false;
+    return true;
   });
 
   const container = document.getElementById('report-table-container');
@@ -74,8 +85,8 @@ function renderReports() {
   // Header row
   html += `<thead><tr>
     <th class="report-th-month">Month</th>
-    ${payees.map(p => `<th class="report-th-payee" title="${escReportHtml(p)}">${escReportHtml(p)}</th>`).join('')}
     <th class="report-th-total">Total</th>
+    ${payees.map(p => `<th class="report-th-payee" title="${escReportHtml(p)}">${escReportHtml(p)}</th>`).join('')}
   </tr></thead>`;
 
   // Data rows
@@ -84,21 +95,21 @@ function renderReports() {
     const rowTotal = payees.reduce((s, p) => s + ((lookup[mk] && lookup[mk][p]) || 0), 0);
     html += `<tr>
       <td class="report-td-month">${formatMonthLabel(mk)}</td>
+      <td class="report-td-rowtotal">${rowTotal !== 0 ? formatCurrency(rowTotal) : '—'}</td>
       ${payees.map(p => {
-        const amt = (lookup[mk] && lookup[mk][p]) || 0;
-        return amt > 0
-          ? `<td class="report-td-amt has-value">${formatCurrency(amt)}</td>`
+        const val = lookup[mk] && lookup[mk][p] != null ? lookup[mk][p] : null;
+        return val !== null
+          ? `<td class="report-td-amt has-value">${formatCurrency(val)}</td>`
           : `<td class="report-td-amt">—</td>`;
       }).join('')}
-      <td class="report-td-rowtotal">${rowTotal > 0 ? formatCurrency(rowTotal) : '—'}</td>
     </tr>`;
   });
 
   // Totals footer row
   html += `<tr class="report-tr-totals">
     <td class="report-td-month">Total</td>
-    ${payees.map(p => `<td class="report-td-amt report-td-coltotal">${colTotals[p] > 0 ? formatCurrency(colTotals[p]) : '—'}</td>`).join('')}
     <td class="report-td-rowtotal report-td-grandtotal">${formatCurrency(grandTotal)}</td>
+    ${payees.map(p => `<td class="report-td-amt report-td-coltotal">${colTotals[p] !== 0 ? formatCurrency(colTotals[p]) : '—'}</td>`).join('')}
   </tr>`;
 
   html += `</tbody></table></div>`;

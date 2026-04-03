@@ -22,7 +22,25 @@
   <button class="header-util-btn" onclick="backupData()" title="Download a JSON backup of all bills">&#8681; Backup</button>
   <button class="header-util-btn" onclick="document.getElementById('restore-input').click()" title="Restore from a JSON backup">&#8679; Restore</button>
   <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)">
-  <button class="header-add-btn" onclick="openBulkAddModal()">+ Add Bills</button>
+  <div class="header-add-dropdown" id="header-add-dropdown">
+    <button class="header-add-btn" onclick="toggleAddDropdown()">+ Bill Entry <span class="header-add-caret">▾</span></button>
+    <div class="header-add-menu" id="header-add-menu">
+      <button class="header-add-item" onclick="toggleAddDropdown(); openAddModal()">
+        <span class="header-add-icon">＋</span>
+        <span class="header-add-text">
+          <span class="header-add-label">Add Bill</span>
+          <span class="header-add-sub">Single bill entry form</span>
+        </span>
+      </button>
+      <button class="header-add-item" onclick="toggleAddDropdown(); openBulkAddModal()">
+        <span class="header-add-icon">&#9783;</span>
+        <span class="header-add-text">
+          <span class="header-add-label">Bulk Bills</span>
+          <span class="header-add-sub">Enter multiple bills in a grid</span>
+        </span>
+      </button>
+    </div>
+  </div>
 </header>
 
 <!-- ─── STATS BAR ─── -->
@@ -47,6 +65,16 @@
     <span style="color:var(--text-muted);font-size:12px">to</span>
     <input type="date" id="gf-to" onchange="onFilterChange()" style="width:136px">
   </div>
+  <select id="gf-subscription" onchange="onFilterChange()">
+    <option value="exclude">No Subscriptions</option>
+    <option value="all">All Bills</option>
+    <option value="only">Subscriptions Only</option>
+  </select>
+  <select id="gf-recurring" onchange="onFilterChange()">
+    <option value="all">All Payees</option>
+    <option value="recurring">Recurring Only</option>
+    <option value="nonrecurring">Non-Recurring Only</option>
+  </select>
   <div class="filter-spacer"></div>
   <span class="filter-count" id="expenses-count"></span>
   <button class="gf-reset-btn" onclick="resetFilters()" title="Clear all filters">✕ Reset</button>
@@ -102,6 +130,16 @@
       <input type="month" id="report-from" onchange="onReportRangeChange()">
       <span class="report-range-sep">to</span>
       <input type="month" id="report-to" onchange="onReportRangeChange()">
+      <select id="report-subscription" onchange="onReportRangeChange()">
+        <option value="exclude">No Subscriptions</option>
+        <option value="all">All Bills</option>
+        <option value="only">Subscriptions Only</option>
+      </select>
+      <select id="report-recurring" onchange="onReportRangeChange()">
+        <option value="all">All Payees</option>
+        <option value="recurring">Recurring Only</option>
+        <option value="nonrecurring">Non-Recurring Only</option>
+      </select>
     </div>
     <div id="report-table-container"></div>
   </div>
@@ -134,11 +172,36 @@
         <table class="bulk-grid-table">
           <thead>
             <tr>
-              <th class="col-check">Pay</th>
-              <th class="col-payee">Payee</th>
-              <th class="col-amount">Amount ($)</th>
-              <th class="col-date">Date</th>
-              <th class="col-notes">Notes</th>
+              <th class="col-check">
+                <div class="bulk-th bulk-th-center">
+                  <span class="bulk-th-label">Pay</span>
+                  <input type="checkbox" id="bulk-check-all" checked title="Select / deselect all" onchange="toggleAllBulkRows(this.checked)">
+                </div>
+              </th>
+              <th class="col-payee">
+                <div class="bulk-th">
+                  <span class="bulk-th-label">Payee</span>
+                  <span class="bulk-th-ctrl-placeholder"></span>
+                </div>
+              </th>
+              <th class="col-amount">
+                <div class="bulk-th">
+                  <span class="bulk-th-label">Amount ($)</span>
+                  <span class="bulk-amount-total" id="bulk-amount-total">—</span>
+                </div>
+              </th>
+              <th class="col-date">
+                <div class="bulk-th">
+                  <span class="bulk-th-label">Date</span>
+                  <input type="date" id="bulk-date-all" title="Set date for all rows" onchange="setBulkDate(this.value)">
+                </div>
+              </th>
+              <th class="col-notes">
+                <div class="bulk-th">
+                  <span class="bulk-th-label">Notes</span>
+                  <span class="bulk-th-ctrl-placeholder"></span>
+                </div>
+              </th>
               <th class="col-del"></th>
             </tr>
           </thead>
@@ -175,7 +238,7 @@
           </div>
           <div class="fg">
             <label>Amount ($)</label>
-            <input type="number" id="f-amount" placeholder="0.00" step="0.01" min="0.01" required>
+            <input type="number" id="f-amount" placeholder="0.00" step="0.01" required>
           </div>
         </div>
 

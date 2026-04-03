@@ -5,8 +5,35 @@ let dayModalDate = null;
 // ─── Bulk Add Bills (grid) ────────────────────────────────────────────────────
 
 function openBulkAddModal(dateStr) {
-  buildBulkGrid(dateStr || todayStr());
+  const date = dateStr || todayStr();
+  buildBulkGrid(date);
+  document.getElementById('bulk-date-all').value = date;
   document.getElementById('bulk-add-overlay').style.display = 'flex';
+}
+
+function setBulkDate(dateStr) {
+  document.querySelectorAll('#bulk-grid-body .row-date').forEach(input => {
+    input.value = dateStr;
+  });
+}
+
+function toggleAllBulkRows(checked) {
+  document.querySelectorAll('#bulk-grid-body .row-check').forEach(cb => {
+    cb.checked = checked;
+  });
+  updateBulkTotal();
+}
+
+function updateBulkTotal() {
+  const rows = document.querySelectorAll('#bulk-grid-body .bulk-row');
+  let total = 0;
+  rows.forEach(row => {
+    const checked = row.querySelector('.row-check').checked;
+    const amt = parseFloat(row.querySelector('.row-amount').value);
+    if (checked && !isNaN(amt)) total += amt;
+  });
+  const el = document.getElementById('bulk-amount-total');
+  if (el) el.textContent = rows.length ? formatCurrency(total) : '—';
 }
 
 function closeBulkAddModal() {
@@ -28,6 +55,9 @@ function buildBulkGrid(dateStr) {
     return;
   }
   tbody.innerHTML = recurring.map(p => buildFixedRow(p, dateStr)).join('');
+  tbody.addEventListener('input',  updateBulkTotal);
+  tbody.addEventListener('change', updateBulkTotal);
+  updateBulkTotal();
 }
 
 function buildFixedRow(payee, dateStr) {
@@ -40,7 +70,7 @@ function buildFixedRow(payee, dateStr) {
       </td>
       <td class="col-amount">
         <input type="number" class="row-amount grid-input" placeholder="0.00"
-               step="0.01" min="0" value="${payee.defaultAmount || ''}">
+               step="0.01" value="${payee.defaultAmount || ''}">
       </td>
       <td class="col-date">
         <input type="date" class="row-date grid-input" value="${dateStr || ''}">
@@ -58,6 +88,9 @@ function addBulkRow() {
     `<option value="${p.name}">${p.isRecurring ? '🔄 ' : ''}${p.name}</option>`
   ).join('');
 
+  const lastDateInput = [...document.querySelectorAll('#bulk-grid-body .row-date')].at(-1);
+  const dateStr = (lastDateInput && lastDateInput.value) ? lastDateInput.value : todayStr();
+
   const tr = document.createElement('tr');
   tr.className = 'bulk-row';
   tr.innerHTML = `
@@ -69,10 +102,10 @@ function addBulkRow() {
       </select>
     </td>
     <td class="col-amount">
-      <input type="number" class="row-amount grid-input" placeholder="0.00" step="0.01" min="0">
+      <input type="number" class="row-amount grid-input" placeholder="0.00" step="0.01">
     </td>
     <td class="col-date">
-      <input type="date" class="row-date grid-input" value="${todayStr()}">
+      <input type="date" class="row-date grid-input" value="${dateStr}">
     </td>
     <td class="col-notes">
       <input type="text" class="row-notes grid-input" placeholder="Notes...">
@@ -81,6 +114,7 @@ function addBulkRow() {
       <button class="icon-btn del-btn" onclick="this.closest('tr').remove()" title="Remove">✕</button>
     </td>`;
   document.getElementById('bulk-grid-body').appendChild(tr);
+  updateBulkTotal();
 }
 
 
@@ -99,7 +133,7 @@ function saveBulkAddForm() {
     const notes   = row.querySelector('.row-notes').value.trim();
 
     if (!payee)                          { showToast('Select a payee for all checked rows', 'error'); return; }
-    if (isNaN(amount) || amount <= 0)    { showToast(`Enter a valid amount for "${payee}"`, 'error'); return; }
+    if (isNaN(amount))                   { showToast(`Enter a valid amount for "${payee}"`, 'error'); return; }
     if (!date)                           { showToast(`Select a date for "${payee}"`, 'error'); return; }
 
     bills.push({ date, description: payee, payee, amount, category: '', notes,
@@ -199,7 +233,7 @@ function saveExpenseForm() {
 
   if (!date)                        { showToast('Please select a date', 'error'); return; }
   if (!description)                 { showToast('Please enter a description', 'error'); return; }
-  if (isNaN(amount) || amount <= 0) { showToast('Please enter a valid amount', 'error'); return; }
+  if (isNaN(amount))                { showToast('Please enter a valid amount', 'error'); return; }
 
   const expense = { date, description, amount, payee, isSubscription, frequency, notes, tags: formTags };
 

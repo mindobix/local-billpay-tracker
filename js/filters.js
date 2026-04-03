@@ -4,11 +4,22 @@ let gFilters = {
   dateRange: '',
   fromDate: '',
   toDate: '',
+  subscription: 'exclude',
+  recurring: 'all',
 };
 
 function applyFilters(expenses) {
-  const { search, payee, dateRange, fromDate, toDate } = gFilters;
+  const { search, payee, dateRange, fromDate, toDate, subscription, recurring } = gFilters;
   let filtered = expenses;
+
+  if (subscription === 'exclude') filtered = filtered.filter(e => !e.isSubscription);
+  else if (subscription === 'only') filtered = filtered.filter(e => !!e.isSubscription);
+
+  if (recurring !== 'all') {
+    const recurringNames = new Set(getPayees().filter(p => p.isRecurring).map(p => p.name));
+    if (recurring === 'recurring')    filtered = filtered.filter(e => recurringNames.has(e.payee || e.paymentMethod || ''));
+    if (recurring === 'nonrecurring') filtered = filtered.filter(e => !recurringNames.has(e.payee || e.paymentMethod || ''));
+  }
 
   if (search) {
     const q = search.toLowerCase();
@@ -41,16 +52,18 @@ function applyFilters(expenses) {
 }
 
 function onFilterChange() {
-  gFilters.search    = document.getElementById('gf-search').value.trim();
-  gFilters.payee     = document.getElementById('gf-payee').value;
-  gFilters.dateRange = document.getElementById('gf-date').value;
-  gFilters.fromDate  = document.getElementById('gf-from').value;
-  gFilters.toDate    = document.getElementById('gf-to').value;
+  gFilters.search        = document.getElementById('gf-search').value.trim();
+  gFilters.payee         = document.getElementById('gf-payee').value;
+  gFilters.dateRange     = document.getElementById('gf-date').value;
+  gFilters.fromDate      = document.getElementById('gf-from').value;
+  gFilters.toDate        = document.getElementById('gf-to').value;
+  gFilters.subscription  = document.getElementById('gf-subscription').value;
+  gFilters.recurring     = document.getElementById('gf-recurring').value;
 
   document.getElementById('gf-custom-range').style.display =
     gFilters.dateRange === 'custom' ? 'flex' : 'none';
 
-  renderExpenses();
+  renderCurrentView();
   renderStatsBar();
   updateActiveFiltersBar();
 }
@@ -72,6 +85,12 @@ function updateActiveFiltersBar() {
     const label = [gFilters.fromDate && formatDate(gFilters.fromDate), gFilters.toDate && formatDate(gFilters.toDate)].filter(Boolean).join(' → ');
     active.push({ label, clear: () => { document.getElementById('gf-date').value = ''; document.getElementById('gf-from').value = ''; document.getElementById('gf-to').value = ''; onFilterChange(); } });
   }
+  if (gFilters.subscription === 'only')
+    active.push({ label: 'Subscriptions Only', clear: () => { document.getElementById('gf-subscription').value = 'exclude'; onFilterChange(); } });
+  if (gFilters.recurring === 'recurring')
+    active.push({ label: 'Recurring Payees', clear: () => { document.getElementById('gf-recurring').value = 'all'; onFilterChange(); } });
+  if (gFilters.recurring === 'nonrecurring')
+    active.push({ label: 'Non-Recurring Payees', clear: () => { document.getElementById('gf-recurring').value = 'all'; onFilterChange(); } });
 
   if (active.length) {
     bar.style.display = 'flex';
@@ -85,14 +104,16 @@ function updateActiveFiltersBar() {
 }
 
 function resetFilters() {
-  gFilters = { search: '', payee: '', dateRange: '', fromDate: '', toDate: '' };
-  document.getElementById('gf-search').value    = '';
-  document.getElementById('gf-payee').value     = '';
-  document.getElementById('gf-date').value      = '';
-  document.getElementById('gf-from').value      = '';
-  document.getElementById('gf-to').value        = '';
+  gFilters = { search: '', payee: '', dateRange: '', fromDate: '', toDate: '', subscription: 'exclude', recurring: 'all' };
+  document.getElementById('gf-search').value        = '';
+  document.getElementById('gf-payee').value         = '';
+  document.getElementById('gf-date').value          = '';
+  document.getElementById('gf-from').value          = '';
+  document.getElementById('gf-to').value            = '';
+  document.getElementById('gf-subscription').value  = 'exclude';
+  document.getElementById('gf-recurring').value     = 'all';
   document.getElementById('gf-custom-range').style.display = 'none';
   document.getElementById('gf-active-bar').style.display   = 'none';
-  renderExpenses();
+  renderCurrentView();
   renderStatsBar();
 }
