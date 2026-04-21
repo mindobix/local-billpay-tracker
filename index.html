@@ -16,9 +16,9 @@
     <button class="nav-btn" id="nav-expenses" onclick="switchView('expenses')">📋 Bills</button>
     <button class="nav-btn" id="nav-subscriptions" onclick="switchView('subscriptions')">🔄 Subscriptions</button>
     <button class="nav-btn" id="nav-reports" onclick="switchView('reports')">📊 Reports</button>
+    <button class="nav-btn" id="nav-manage" onclick="switchView('manage')">👥 Payees</button>
   </nav>
   <div class="header-spacer"></div>
-  <button class="header-util-btn" onclick="openManageModal()" title="Manage payees and categories">⚙ Manage</button>
   <button class="header-util-btn" onclick="backupData()" title="Download a JSON backup of all bills">&#8681; Backup</button>
   <button class="header-util-btn" onclick="document.getElementById('restore-input').click()" title="Restore from a JSON backup">&#8679; Restore</button>
   <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)">
@@ -142,6 +142,27 @@
       </select>
     </div>
     <div id="report-table-container"></div>
+  </div>
+
+  <!-- ── PAYEES VIEW ── -->
+  <div id="view-manage" style="display:none">
+    <div class="payees-toolbar">
+      <div class="payees-search-wrap">
+        <span class="payees-search-icon">🔍</span>
+        <input type="text" id="payees-search" placeholder="Search payees..." oninput="renderManagePayees()">
+      </div>
+      <div class="payees-add-row">
+        <input type="text" id="new-payee-input" placeholder="New payee name..."
+               onkeydown="if(event.key==='Enter')addNewPayee()">
+        <label class="payees-recur-label">
+          <input type="checkbox" id="new-payee-recur"> Recurring
+        </label>
+        <button class="btn btn-primary payees-add-btn" onclick="addNewPayee()">+ Add Payee</button>
+      </div>
+    </div>
+    <div class="payees-view-body">
+      <div id="manage-payees-list" class="payees-grid"></div>
+    </div>
   </div>
 
   <!-- ── SUBSCRIPTIONS VIEW ── -->
@@ -331,30 +352,11 @@
   </div>
 </div>
 
-<!-- ─── MANAGE MODAL ─── -->
-<div class="overlay" id="manage-overlay">
-  <div class="modal modal-manage">
-    <div class="modal-hdr">
-      <div class="modal-hdr-title">Manage</div>
-      <button class="close-btn" onclick="closeManageModal()">&#10005;</button>
-    </div>
-    <div class="modal-body">
-      <div id="manage-payees-list"></div>
-      <div class="manage-add-row">
-        <input type="text" id="new-payee-input" placeholder="New payee name..."
-               onkeydown="if(event.key==='Enter')addNewPayee()">
-        <label class="manage-recur-label">
-          <input type="checkbox" id="new-payee-recur"> Recurring
-        </label>
-        <button class="btn btn-primary" onclick="addNewPayee()">+ Add</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ─── TOAST ─── -->
 <div id="toast" class="toast"></div>
 
+<script src="js/crypto.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/helpers.js"></script>
 <script src="js/filters.js"></script>

@@ -13,7 +13,7 @@ document.addEventListener('click', e => {
 
 function switchView(view) {
   currentView = view;
-  ['calendar', 'expenses', 'subscriptions', 'reports'].forEach(v => {
+  ['calendar', 'expenses', 'subscriptions', 'reports', 'manage'].forEach(v => {
     document.getElementById(`view-${v}`).style.display = v === view ? '' : 'none';
     document.getElementById(`nav-${v}`).classList.toggle('active', v === view);
   });
@@ -29,6 +29,7 @@ function renderCurrentView() {
   else if (currentView === 'expenses') renderExpenses();
   else if (currentView === 'subscriptions') renderSubscriptions();
   else if (currentView === 'reports')      renderReports();
+  else if (currentView === 'manage')        renderManagePayees();
 }
 
 function renderAll() {
@@ -92,9 +93,6 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('day-overlay').addEventListener('click', e => {
     if (e.target.id === 'day-overlay') closeDayModal();
   });
-  document.getElementById('manage-overlay').addEventListener('click', e => {
-    if (e.target.id === 'manage-overlay') closeManageModal();
-  });
   document.getElementById('bulk-add-overlay').addEventListener('click', e => {
     if (e.target.id === 'bulk-add-overlay') closeBulkAddModal();
   });
@@ -103,7 +101,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') {
       closeExpenseModal();
       closeDayModal();
-      closeManageModal();
       closeBulkAddModal();
     }
   });

@@ -50,7 +50,7 @@ function buildBulkGrid(dateStr) {
     tbody.innerHTML = `
       <tr><td colspan="5" class="bulk-empty">
         No recurring payees set up yet.
-        <button class="link-btn" onclick="closeBulkAddModal();openManageModal();">Go to Manage →</button>
+        <button class="link-btn" onclick="closeBulkAddModal();switchView('manage');">Go to Manage →</button>
       </td></tr>`;
     return;
   }
